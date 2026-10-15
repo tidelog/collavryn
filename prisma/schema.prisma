@@ -14,10 +14,11 @@ enum OrganisationRole {
 }
 
 model User {
-  id          String       @id @default(uuid())
-  email       String       @unique
-  name        String?
-  memberships Membership[]
+  id           String       @id @default(uuid())
+  email        String       @unique
+  passwordHash String?
+  name         String?
+  memberships  Membership[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
