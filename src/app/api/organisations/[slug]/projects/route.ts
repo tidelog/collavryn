@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { recordActivity } from "@/lib/activity";
 import {
   canManageProjects,
   getProjectAccess,
@@ -135,6 +136,15 @@ export async function POST(
         createdAt: true,
         updatedAt: true,
       },
+    });
+
+    await recordActivity({
+      organisationId: access.organisationId,
+      actorId: session.user.id,
+      action: "PROJECT_CREATED",
+      entityType: "PROJECT",
+      entityId: project.id,
+      summary: `Created project "${project.name}"`,
     });
 
     return NextResponse.json({ project }, { status: 201 });

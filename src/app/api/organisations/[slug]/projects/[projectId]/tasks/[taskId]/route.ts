@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { recordActivity } from "@/lib/activity";
 import { parseProjectBody } from "@/lib/project-access";
 import {
   assigneeBelongsToOrganisation,
@@ -47,7 +48,7 @@ async function authorise(context: Context) {
     } as const;
   }
 
-  return { access, taskId } as const;
+  return { access, taskId, actorId: session.user.id } as const;
 }
 
 export async function GET(
@@ -193,6 +194,17 @@ export async function PATCH(
     },
   });
 
+  if (task) {
+    await recordActivity({
+      organisationId: result.access.membership.organisationId,
+      actorId: result.actorId,
+      action: "TASK_UPDATED",
+      entityType: "TASK",
+      entityId: task.id,
+      summary: `Updated task "${task.title}"`,
+    });
+  }
+
   return NextResponse.json({ task });
 }
 
@@ -229,6 +241,15 @@ export async function DELETE(
       { status: 404 },
     );
   }
+
+  await recordActivity({
+    organisationId: result.access.membership.organisationId,
+    actorId: result.actorId,
+    action: "TASK_DELETED",
+    entityType: "TASK",
+    entityId: result.taskId,
+    summary: "Deleted a task",
+  });
 
   return NextResponse.json({ success: true });
 }

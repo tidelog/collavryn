@@ -388,6 +388,28 @@ test("a user can register, sign in, and sign out", async ({ page }) => {
 
     expect(deletedTask.status()).toBe(404);
 
+    const overviewResponse = await page.request.get(
+      `/api/organisations/${organisationResult.organisation.slug}/overview`,
+    );
+
+    expect(overviewResponse.status()).toBe(200);
+
+    const overview = await overviewResponse.json();
+
+    expect(overview.summary.projects.total).toBeGreaterThanOrEqual(1);
+    expect(overview.summary.members).toBeGreaterThanOrEqual(1);
+    expect(overview.summary.tasks.total).toBeGreaterThanOrEqual(0);
+
+    const actions = overview.activity.map(
+      (event: { action: string }) => event.action,
+    );
+
+    expect(actions).toContain("PROJECT_CREATED");
+    expect(actions).toContain("TASK_CREATED");
+    expect(actions).toContain("TASK_UPDATED");
+    expect(actions).toContain("TASK_DELETED");
+
+    console.log("PASS: Workspace dashboard and activity tracking");
     console.log("PASS: Task lifecycle");
     console.log("PASS: Task validation and assignee restrictions");
     console.log("PASS: Archived project task protection");

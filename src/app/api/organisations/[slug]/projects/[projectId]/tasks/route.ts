@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { recordActivity } from "@/lib/activity";
 import { parseProjectBody } from "@/lib/project-access";
 import {
   assigneeBelongsToOrganisation,
@@ -174,6 +175,15 @@ export async function POST(
         assigneeId: data.assigneeId ?? null,
         projectId: result.access.project.id,
       },
+    });
+
+    await recordActivity({
+      organisationId: result.access.membership.organisationId,
+      actorId: result.access.actorId,
+      action: "TASK_CREATED",
+      entityType: "TASK",
+      entityId: task.id,
+      summary: `Created task "${task.title}"`,
     });
 
     return NextResponse.json({ task }, { status: 201 });

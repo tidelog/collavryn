@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { recordActivity } from "@/lib/activity";
 import {
   canManageProjects,
   getProjectAccess,
@@ -31,7 +32,7 @@ async function authorise(context: Context) {
     return { error: "Workspace not found", status: 404 } as const;
   }
 
-  return { access, projectId } as const;
+  return { access, projectId, actorId: session.user.id } as const;
 }
 
 export async function GET(
@@ -142,6 +143,17 @@ export async function PATCH(
     },
   });
 
+  if (project) {
+    await recordActivity({
+      organisationId: result.access.organisationId,
+      actorId: result.actorId,
+      action: "PROJECT_UPDATED",
+      entityType: "PROJECT",
+      entityId: project.id,
+      summary: `Updated project "${project.name}"`,
+    });
+  }
+
   return NextResponse.json({ project });
 }
 
@@ -178,6 +190,15 @@ export async function DELETE(
       { status: 404 },
     );
   }
+
+  await recordActivity({
+    organisationId: result.access.organisationId,
+    actorId: result.actorId,
+    action: "PROJECT_DELETED",
+    entityType: "PROJECT",
+    entityId: result.projectId,
+    summary: "Deleted a project",
+  });
 
   return NextResponse.json({ success: true });
 }

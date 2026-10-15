@@ -29,7 +29,7 @@ export async function getTaskProjectAccess(
     return null;
   }
 
-  return { membership, project };
+  return { membership, project, actorId: userId };
 }
 
 export async function assigneeBelongsToOrganisation(

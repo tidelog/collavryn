@@ -121,6 +121,13 @@ function OrganisationWorkspaceContent() {
       <header>
         <h1 className="text-3xl font-bold">Workspace</h1>
 
+        <a
+          href={`/organisations/${encodeURIComponent(slug)}/overview`}
+          className="mt-4 inline-block text-blue-600 underline"
+        >
+          View workspace dashboard
+        </a>
+
         <Link
           href={`/organisations/${encodeURIComponent(slug)}/projects`}
           className="mt-4 inline-block text-blue-600 underline"
