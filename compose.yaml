@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: collavryn
+      POSTGRES_PASSWORD: ${COLLAVRYN_DB_PASSWORD:?Database password required}
+      POSTGRES_DB: collavryn
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - collavryn_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U collavryn -d collavryn"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  collavryn_pgdata:
