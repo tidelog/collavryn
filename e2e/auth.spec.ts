@@ -197,6 +197,96 @@ test("a user can register, sign in, and sign out", async ({ page }) => {
 
     console.log("PASS: Organisation listing and owner protection");
 
+
+    const projectsEndpoint =
+      `/api/organisations/${organisationResult.organisation.slug}/projects`;
+
+    const invalidProject = await page.request.post(projectsEndpoint, {
+      data: {
+        name: "Invalid",
+        organisationId: "00000000-0000-4000-8000-000000000000",
+      },
+    });
+
+    expect(invalidProject.status()).toBe(400);
+
+    const createProject = await page.request.post(projectsEndpoint, {
+      data: {
+        name: "Browser Test Project",
+        description: "Automated project lifecycle test",
+      },
+    });
+
+    expect(createProject.status()).toBe(201);
+
+    const createdProject = (await createProject.json()).project;
+
+    expect(createdProject.name).toBe("Browser Test Project");
+    expect(createdProject.status).toBe("ACTIVE");
+
+    const projectEndpoint =
+      `${projectsEndpoint}/${createdProject.id}`;
+
+    const listProjects = await page.request.get(projectsEndpoint);
+    expect(listProjects.status()).toBe(200);
+
+    const projectList = await listProjects.json();
+
+    expect(
+      projectList.projects.some(
+        (project: { id: string }) =>
+          project.id === createdProject.id,
+      ),
+    ).toBe(true);
+
+    const viewProject = await page.request.get(projectEndpoint);
+    expect(viewProject.status()).toBe(200);
+
+    const updateProject = await page.request.patch(projectEndpoint, {
+      data: {
+        name: "Updated Browser Test Project",
+        description: "Updated description",
+      },
+    });
+
+    expect(updateProject.status()).toBe(200);
+    expect((await updateProject.json()).project.name).toBe(
+      "Updated Browser Test Project",
+    );
+
+    const archiveProject = await page.request.patch(projectEndpoint, {
+      data: { status: "ARCHIVED" },
+    });
+
+    expect(archiveProject.status()).toBe(200);
+
+    const archivedList = await page.request.get(
+      `${projectsEndpoint}?status=ARCHIVED`,
+    );
+
+    expect(archivedList.status()).toBe(200);
+
+    expect(
+      (await archivedList.json()).projects.some(
+        (project: { id: string }) =>
+          project.id === createdProject.id,
+      ),
+    ).toBe(true);
+
+    const restoreProject = await page.request.patch(projectEndpoint, {
+      data: { status: "ACTIVE" },
+    });
+
+    expect(restoreProject.status()).toBe(200);
+
+    const deleteProject = await page.request.delete(projectEndpoint);
+    expect(deleteProject.status()).toBe(200);
+
+    const deletedProject = await page.request.get(projectEndpoint);
+    expect(deletedProject.status()).toBe(404);
+
+    console.log("PASS: Project lifecycle");
+
     console.log("PASS: Authenticated organisation creation");
 
     await page.getByRole("button", { name: /sign out/i }).click();

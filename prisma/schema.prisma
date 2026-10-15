@@ -32,6 +32,7 @@ model Organisation {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  projects Project[]
 }
 
 model Membership {
@@ -48,4 +49,26 @@ model Membership {
 
   @@unique([userId, organisationId])
   @@index([organisationId])
+}
+
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+model Project {
+  id String @id @default(uuid())
+  name String
+  description String?
+  status ProjectStatus @default(ACTIVE)
+
+  organisationId String
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organisationId, status])
+  @@index([organisationId, createdAt])
 }
