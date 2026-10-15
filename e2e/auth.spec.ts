@@ -279,6 +279,119 @@ test("a user can register, sign in, and sign out", async ({ page }) => {
 
     expect(restoreProject.status()).toBe(200);
 
+
+    const tasksEndpoint = `${projectEndpoint}/tasks`;
+
+    const invalidTask = await page.request.post(tasksEndpoint, {
+      data: {
+        title: "Invalid task",
+        organisationId: "00000000-0000-4000-8000-000000000000",
+      },
+    });
+
+    expect(invalidTask.status()).toBe(400);
+
+    const invalidAssignee = await page.request.post(tasksEndpoint, {
+      data: {
+        title: "Invalid assignee",
+        assigneeId: "00000000-0000-4000-8000-000000000000",
+      },
+    });
+
+    expect(invalidAssignee.status()).toBe(400);
+
+    const createTask = await page.request.post(tasksEndpoint, {
+      data: {
+        title: "Browser Test Task",
+        description: "Task lifecycle test",
+        status: "TODO",
+        priority: "HIGH",
+        dueDate: "2026-12-15",
+      },
+    });
+
+    expect(createTask.status()).toBe(201);
+
+    const task = (await createTask.json()).task;
+
+    expect(task.title).toBe("Browser Test Task");
+    expect(task.status).toBe("TODO");
+    expect(task.priority).toBe("HIGH");
+
+    const taskEndpoint = `${tasksEndpoint}/${task.id}`;
+
+    const listTasks = await page.request.get(tasksEndpoint);
+
+    expect(listTasks.status()).toBe(200);
+
+    expect(
+      (await listTasks.json()).tasks.some(
+        (item: { id: string }) => item.id === task.id,
+      ),
+    ).toBe(true);
+
+    const viewTask = await page.request.get(taskEndpoint);
+
+    expect(viewTask.status()).toBe(200);
+
+    const updateTask = await page.request.patch(taskEndpoint, {
+      data: {
+        title: "Updated Browser Test Task",
+        status: "IN_PROGRESS",
+        priority: "LOW",
+      },
+    });
+
+    expect(updateTask.status()).toBe(200);
+
+    const updatedTask = (await updateTask.json()).task;
+
+    expect(updatedTask.title).toBe("Updated Browser Test Task");
+    expect(updatedTask.status).toBe("IN_PROGRESS");
+    expect(updatedTask.priority).toBe("LOW");
+
+    const finishTask = await page.request.patch(taskEndpoint, {
+      data: { status: "DONE" },
+    });
+
+    expect(finishTask.status()).toBe(200);
+
+    const archiveBeforeDelete = await page.request.patch(
+      projectEndpoint,
+      { data: { status: "ARCHIVED" } },
+    );
+
+    expect(archiveBeforeDelete.status()).toBe(200);
+
+    const archivedTaskWrite = await page.request.patch(taskEndpoint, {
+      data: { title: "Should fail" },
+    });
+
+    expect(archivedTaskWrite.status()).toBe(409);
+
+    const archivedTaskRead = await page.request.get(taskEndpoint);
+
+    expect(archivedTaskRead.status()).toBe(200);
+
+    const restoreBeforeDelete = await page.request.patch(
+      projectEndpoint,
+      { data: { status: "ACTIVE" } },
+    );
+
+    expect(restoreBeforeDelete.status()).toBe(200);
+
+    const deleteTask = await page.request.delete(taskEndpoint);
+
+    expect(deleteTask.status()).toBe(200);
+
+    const deletedTask = await page.request.get(taskEndpoint);
+
+    expect(deletedTask.status()).toBe(404);
+
+    console.log("PASS: Task lifecycle");
+    console.log("PASS: Task validation and assignee restrictions");
+    console.log("PASS: Archived project task protection");
+
     const deleteProject = await page.request.delete(projectEndpoint);
     expect(deleteProject.status()).toBe(200);
 

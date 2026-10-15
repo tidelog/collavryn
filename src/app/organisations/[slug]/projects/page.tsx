@@ -266,6 +266,13 @@ function ProjectsContent() {
               <div>
                 <h3 className="text-lg font-semibold">{project.name}</h3>
 
+                <Link
+                  href={`/organisations/${encodeURIComponent(slug)}/projects/${project.id}/tasks`}
+                  className="mt-3 inline-block text-sm text-blue-600 underline"
+                >
+                  Manage tasks
+                </Link>
+
                 <p className="text-sm opacity-70">
                   {project.description || "No description"}
                 </p>

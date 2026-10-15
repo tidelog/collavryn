@@ -120,6 +120,13 @@ function OrganisationWorkspaceContent() {
       </Link>
       <header>
         <h1 className="text-3xl font-bold">Workspace</h1>
+
+        <Link
+          href={`/organisations/${encodeURIComponent(slug)}/projects`}
+          className="mt-4 inline-block text-blue-600 underline"
+        >
+          View projects
+        </Link>
         <p className="mt-2 text-sm opacity-70">
           {slug} · Your role: {role || "Unknown"}
         </p>
