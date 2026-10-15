@@ -207,6 +207,11 @@ function OverviewContent() {
 
               <div className="mt-4 h-2 overflow-hidden rounded bg-gray-200">
                 <div
+                  role="progressbar"
+                  aria-label={`${project.name} completion`}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={percent}
                   className="h-full bg-blue-600"
                   style={{ width: `${percent}%` }}
                 />
@@ -237,7 +242,12 @@ function OverviewContent() {
             key={task.id}
             className="rounded-xl border p-4"
           >
-            <p className="font-semibold">{task.title}</p>
+            <Link
+              href={`${workspace}/projects/${task.project.id}/tasks`}
+              className="font-semibold text-blue-600 underline"
+            >
+              {task.title}
+            </Link>
 
             <p className="mt-1 text-sm opacity-70">
               {task.project.name} · {task.priority} priority

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getProjectAccess } from "@/lib/project-access";
+import { getProjectAccess } from "./project-access";
 
 export async function getTaskProjectAccess(
   slug: string,

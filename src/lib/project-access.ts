@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { canManageProjects } from "@/lib/project-permissions";
+import { canManageProjects } from "./project-permissions";
 
 export { canManageProjects };
 

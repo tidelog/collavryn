@@ -118,6 +118,28 @@ export async function GET(
 
   const metrics = calculateTaskMetrics(tasks);
 
+  const taskCounts = new Map<
+    string,
+    { total: number; completed: number }
+  >();
+
+  for (const task of tasks) {
+    const projectId = task.project.id;
+
+    const count = taskCounts.get(projectId) ?? {
+      total: 0,
+      completed: 0,
+    };
+
+    count.total += 1;
+
+    if (task.status === "DONE") {
+      count.completed += 1;
+    }
+
+    taskCounts.set(projectId, count);
+  }
+
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
 
@@ -161,14 +183,8 @@ export async function GET(
 
     projects: projects.map((project) => ({
       ...project,
-      taskCount: tasks.filter(
-        (task) => task.project.id === project.id,
-      ).length,
-      completedCount: tasks.filter(
-        (task) =>
-          task.project.id === project.id &&
-          task.status === "DONE",
-      ).length,
+      taskCount: taskCounts.get(project.id)?.total ?? 0,
+      completedCount: taskCounts.get(project.id)?.completed ?? 0,
     })),
 
     upcomingTasks,
