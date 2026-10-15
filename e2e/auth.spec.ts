@@ -65,6 +65,140 @@ test("a user can register, sign in, and sign out", async ({ page }) => {
 
     console.log("PASS: User can sign in and access dashboard");
 
+    const invalidNameResponse = await page.request.post(
+      "/api/organisations",
+      {
+        data: {
+          name: "A",
+        },
+      },
+    );
+
+    expect(invalidNameResponse.status()).toBe(400);
+
+    const unexpectedFieldResponse = await page.request.post(
+      "/api/organisations",
+      {
+        data: {
+          name: "Engineering",
+          role: "OWNER",
+        },
+      },
+    );
+
+    expect(unexpectedFieldResponse.status()).toBe(400);
+
+    const malformedJsonResponse = await page.request.post(
+      "/api/organisations",
+      {
+        data: "{invalid-json",
+        headers: {
+          "content-type": "application/json",
+        },
+      },
+    );
+
+    expect(malformedJsonResponse.status()).toBe(400);
+
+    const oversizedResponse = await page.request.post(
+      "/api/organisations",
+      {
+        data: {
+          name: "X".repeat(5000),
+        },
+      },
+    );
+
+    expect(oversizedResponse.status()).toBe(413);
+
+    console.log("PASS: Invalid organisation requests are rejected");
+
+    const organisationResponse = await page.request.post(
+      "/api/organisations",
+      {
+        data: {
+          name: "Browser Test Organisation",
+        },
+      },
+    );
+
+    expect(organisationResponse.status()).toBe(201);
+
+    const organisationResult = await organisationResponse.json();
+
+    expect(organisationResult.organisation.name).toBe(
+      "Browser Test Organisation",
+    );
+
+    const organisationId = organisationResult.organisation.id;
+
+    execFileSync(
+      "npx",
+      [
+        "tsx",
+        "scripts/verify-organisation.ts",
+        organisationId,
+        email,
+      ],
+      {
+        cwd: process.cwd(),
+        stdio: "inherit",
+      },
+    );
+
+
+    const listingResponse = await page.request.get("/api/organisations");
+    expect(listingResponse.status()).toBe(200);
+
+    const listingResult = await listingResponse.json();
+    expect(
+      listingResult.organisations.some(
+        (organisation: { id: string }) => organisation.id === organisationId,
+      ),
+    ).toBe(true);
+
+    const slug = organisationResult.organisation.slug;
+    const membersEndpoint = `/api/organisations/${slug}/members`;
+
+    const membersResponse = await page.request.get(membersEndpoint);
+    expect(membersResponse.status()).toBe(200);
+
+    const membersResult = await membersResponse.json();
+    expect(membersResult.currentUserRole).toBe("OWNER");
+    expect(membersResult.members).toHaveLength(1);
+
+    const ownerMembershipId = membersResult.members[0].id;
+
+    const removeOwnerResponse = await page.request.delete(
+      `${membersEndpoint}/${ownerMembershipId}`,
+    );
+
+    expect(removeOwnerResponse.status()).toBe(409);
+
+    const demoteOwnerResponse = await page.request.patch(
+      `${membersEndpoint}/${ownerMembershipId}`,
+      { data: { role: "MEMBER" } },
+    );
+
+    expect(demoteOwnerResponse.status()).toBe(409);
+
+    const invalidMemberResponse = await page.request.post(
+      membersEndpoint,
+      { data: { email: "not-a-valid-email" } },
+    );
+
+    expect(invalidMemberResponse.status()).toBe(400);
+
+    const ownerAfter = await page.request.get(membersEndpoint);
+    const ownerAfterResult = await ownerAfter.json();
+
+    expect(ownerAfterResult.members).toHaveLength(1);
+    expect(ownerAfterResult.members[0].role).toBe("OWNER");
+
+    console.log("PASS: Organisation listing and owner protection");
+
+    console.log("PASS: Authenticated organisation creation");
+
     await page.getByRole("button", { name: /sign out/i }).click();
 
     await expect(page).toHaveURL(/\/login(?:\?|$)/);

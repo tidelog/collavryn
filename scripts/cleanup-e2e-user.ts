@@ -26,12 +26,72 @@ async function main() {
   });
 
   try {
-    const result = await prisma.user.deleteMany({
-      where: { email },
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { email },
+        include: {
+          memberships: {
+            include: {
+              organisation: true,
+            },
+          },
+        },
+      });
+
+      if (!user) {
+        return { users: 0, organisations: 0 };
+      }
+
+      for (const membership of user.memberships) {
+        if (
+          membership.role !== "OWNER" ||
+          membership.organisation.name !== "Browser Test Organisation" ||
+          !membership.organisation.slug.startsWith(
+            "browser-test-organisation-",
+          )
+        ) {
+          throw new Error(
+            "Unexpected membership detected. Cleanup refused.",
+          );
+        }
+
+        const membershipCount = await tx.membership.count({
+          where: {
+            organisationId: membership.organisationId,
+          },
+        });
+
+        if (membershipCount !== 1) {
+          throw new Error(
+            "Organisation has additional members. Cleanup refused.",
+          );
+        }
+      }
+
+      for (const membership of user.memberships) {
+        await tx.organisation.delete({
+          where: {
+            id: membership.organisationId,
+          },
+        });
+      }
+
+      await tx.user.delete({
+        where: { id: user.id },
+      });
+
+      return {
+        users: 1,
+        organisations: user.memberships.length,
+      };
     });
 
     console.log(
-      `Temporary browser-test accounts deleted: ${result.count}`,
+      `Temporary browser-test accounts deleted: ${result.users}`,
+    );
+
+    console.log(
+      `Temporary browser-test organisations deleted: ${result.organisations}`,
     );
   } finally {
     await prisma.$disconnect();
