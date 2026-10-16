@@ -1,0 +1,6 @@
+.env
+.env.*
+.agents/
+.claude/
+skills-lock.json
+scripts/inspect-test-organisations.ts
