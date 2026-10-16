@@ -1,0 +1,87 @@
+name: Collavryn CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-and-integration:
+    name: Quality, Database and Browser Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: collavryn
+          POSTGRES_PASSWORD: collavryn_ci_password
+          POSTGRES_DB: collavryn
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U collavryn -d collavryn"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      DATABASE_URL: postgresql://collavryn:collavryn_ci_password@127.0.0.1:55432/collavryn?schema=public
+      AUTH_SECRET: collavryn-ci-only-secret-not-for-production-2026
+      AUTH_TRUST_HOST: "true"
+      NODE_ENV: test
+      CI: "true"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Apply database migrations
+        run: npx prisma migrate deploy
+
+      - name: Check TypeScript
+        run: npm run typecheck
+
+      - name: Check ESLint
+        run: npm run lint
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run end-to-end tests
+        run: npm run test:e2e
+
+      - name: Build production application
+        env:
+          NODE_ENV: production
+        run: npm run build
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
