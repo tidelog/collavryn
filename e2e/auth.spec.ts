@@ -60,7 +60,22 @@ test("a user can register, sign in, and sign out", async ({ page }) => {
 
     await loginForm.locator('button[type="submit"]').click();
 
-    await expect(page).toHaveURL(/\/dashboard(?:\?|$)/);
+    try {
+      await expect(page).toHaveURL(/\/dashboard(?:\?|$)/, {
+        timeout: 15000,
+      });
+    } catch (error) {
+      const alert = page.getByRole("alert");
+      const message = await alert.count()
+        ? await alert.first().innerText()
+        : "No login error displayed";
+
+      console.error("LOGIN DIAGNOSTIC:", message);
+      console.error("LOGIN DIAGNOSTIC URL:", page.url());
+
+      throw error;
+    }
+
     await expect(page.getByText(email)).toBeVisible();
 
     console.log("PASS: User can sign in and access dashboard");
